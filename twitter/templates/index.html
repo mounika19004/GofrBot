@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Content Generator</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Gemini Content Generator</h1>
+    <button id="generate-btn">Generate Posts</button>
+
+    <div id="post-container" style="display:none;">
+        <div id="post-content">
+            <h3>Generated Content:</h3>
+            <p id="content-text"></p>
+        </div>
+        <button id="approve-btn">Approve</button>
+        <button id="modify-btn">Modify</button>
+        <button id="reject-btn">Reject</button>
+    </div>
+
+    <div id="modify-container" style="display:none;">
+        <h3>Modify the prompt:</h3>
+        <textarea id="modify-prompt" rows="4" cols="50"></textarea><br><br>
+        <button id="modify-generate-btn">Generate Again</button>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            let currentGeneratedContent = "";  // Store the current generated content
+            let currentPrompt = "Create a post for #AIForEveryone for the GoFR company."; // Initial prompt
+
+            // Handle Generate button click
+            $("#generate-btn").click(function () {
+                $("#post-container").hide();
+                $("#modify-container").hide();
+
+                // Send the request to generate content
+                $.ajax({
+                    url: "/generate",
+                    method: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({ "prompt": currentPrompt }),
+                    success: function (response) {
+                        if (response.generated_content) {
+                            currentGeneratedContent = response.generated_content;
+                            $("#content-text").text(currentGeneratedContent);
+                            $("#post-container").show();
+                        } else {
+                            alert("Error generating content.");
+                        }
+                    },
+                    error: function (xhr) {
+                        alert("An error occurred.");
+                    }
+                });
+            });
+
+            // Handle Approve button click
+            $("#approve-btn").click(function () {
+                $.ajax({
+                    url: "/save",
+                    method: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({ "content": currentGeneratedContent }),
+                    success: function (response) {
+                        alert(response.message);
+                        resetPage();
+                    },
+                    error: function (xhr) {
+                        alert("Error saving content.");
+                    }
+                });
+            });
+
+            // Handle Modify button click
+            $("#modify-btn").click(function () {
+                $("#modify-container").show();
+            });
+
+            // Handle Modify Generate button click
+            $("#modify-generate-btn").click(function () {
+                const newPrompt = $("#modify-prompt").val();
+                if (newPrompt) {
+                    currentPrompt = newPrompt;  // Update prompt with user input
+
+                    // Regenerate content based on new prompt
+                    $.ajax({
+                        url: "/modify",
+                        method: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({ "new_prompt": currentPrompt }),
+                        success: function (response) {
+                            if (response.generated_content) {
+                                currentGeneratedContent = response.generated_content;
+                                $("#content-text").text(currentGeneratedContent);
+                                $("#modify-container").hide();
+                                $("#post-container").show();
+                            }
+                        },
+                        error: function (xhr) {
+                            alert("Error modifying content.");
+                        }
+                    });
+                } else {
+                    alert("Please enter a new prompt.");
+                }
+            });
+
+            // Handle Reject button click
+            $("#reject-btn").click(function () {
+                resetPage();
+            });
+
+            // Function to reset the page after approval or rejection
+            function resetPage() {
+                currentGeneratedContent = "";
+                currentPrompt = "Create a post for #AIForEveryone for the GoFR company.";  // Reset to the initial prompt
+                $("#content-text").text("");
+                $("#post-container").hide();
+                $("#modify-container").hide();
+            }
+        });
+    </script>
+</body>
+</html>
